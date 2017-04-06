@@ -1,30 +1,26 @@
-import socket  # Import socket module
+import socket  
 import sys
 from collections import namedtuple
 import pickle
-#from _thread import *
+
 import threading
 import inspect
 import time
 import signal
 
-#python server.py
-# python client.py
-
-
-DATA_TYPE = 0b101010101010101
+DATA_TYPE = 0101010101010101
 DATA_SIZE = 64   #need to be modified
 
 data_pkt = namedtuple('data_pkt', 'seq_num checksum data_type data')
 ack_pkt = namedtuple('ack_pkt', 'seq_num zero_field data_type')
 N = 0  # window size
 MSS = 0 # maximum segment size
-ACK = 0 # ACK received from server.
+ACK = 0 # ACKs received from server.
 num_pkts_sent = 0
 num_pkts_acked = 0
 seq_num = 0
-#print(file_content)
-#print (N)
+
+
 window_low = 0
 window_high = int(N)-1
 total_pkts = 0
@@ -33,8 +29,6 @@ pkts = []
 done_transmitting = 0
 starttime = 0
 stoptime= 0
-
-
 
 
 ack_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP Foo
