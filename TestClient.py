@@ -61,7 +61,7 @@ def rdt_send(file, size, check, dta, sock):
 	original_sequence = []	
 	index = 0
 	while index < window_size:
-		if file_start > len(entire_list):
+		if file_start >= len(entire_list):
 			sock.close()
 			break
 		else:
@@ -70,7 +70,7 @@ def rdt_send(file, size, check, dta, sock):
 			to_send.append(check)
 			to_send.append(dta)
 			if (file_start+(size-8)) > len(entire_list):
-				to_send.append(entire_list[file_start:len(entire_list)-(file_start+(size-8))])
+				to_send.append(entire_list[file_start:len(entire_list)])
 				packet = pickle.dumps(to_send)
 				sock.sendto(packet, (SERVER_IP, server_port))
 				file_start=file_start+(size-8)
@@ -87,7 +87,8 @@ def rdt_send(file, size, check, dta, sock):
 				sequence_number+=1
 				print "TO SEND ",to_send
 				index+=1
-	
+	# Start Timer
+	timer = time.time()
 	wait_for_ack(sock)
 
 def wait_for_ack(sock):
@@ -96,8 +97,8 @@ def wait_for_ack(sock):
 	
 	for i in original_sequence:
 		copy_sequence[i] = original_sequence[i]
-
-	while 1:
+	#used to be while 1:
+	while (time.time() - timer) >= 10:
 		recv_packet, addr = s.recvfrom(MSS)
 		recv_packet = pickle.loads(recv_packet)
 
