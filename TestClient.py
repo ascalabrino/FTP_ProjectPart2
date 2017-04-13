@@ -15,13 +15,15 @@ global original_sequence
 global copy_sequence
 original_sequence = []
 copy_sequence = []
+global timer_list 
+timer_list = []
 
 sequence_number = 00000000000000000000000000000000
 checksum = 0000000000000000
 data_packet = 0101010101010101
 SERVER_IP = "127.0.0.1"
 
-#READ IN FROM COMMAND LINE --> Simple_ftp_server server-host-nae server-port# file-name N MSS
+#READ IN FROM COMMAND LINE --> Simple_ftp_server server-host-name server-port# file-name N MSS
 server_host_name = sys.argv[1]
 server_port = sys.argv[2]
 file_name = sys.argv[3]
@@ -53,6 +55,21 @@ def read_file(file):
 	else:
 		rdt_send()
 
+# Carry bit used in one's combliment
+def checksum_addition(num_1, num_2):
+    c = num_1 + num_2
+    return (c & 0xffff) + (c >> 16)
+
+
+# Calculate the checksum of the data only. Return True or False
+def calculate_checksum(dta):
+    checksum = 0
+    for i in range(0, len(dta), 2):
+        message = str(dat)
+        w = ord(message[i]) + (ord(message[i+1]) << 8)
+        checksum = checksum_addition(checksum, w)
+    return (not checksum) & 0xfff
+
 def rdt_send(file, size, check, dta, sock):
 	#  Caluclate sequence number
 	file_start = sequence_number * (size-8)
@@ -68,7 +85,7 @@ def rdt_send(file, size, check, dta, sock):
 			to_send = []
 			to_send.append(sequence_number)
 			to_send.append(check)
-			to_send.append(dta)
+			to_send.append(check_sum(dta))
 			if (file_start+(size-8)) > len(entire_list):
 				to_send.append(entire_list[file_start:len(entire_list)])
 				packet = pickle.dumps(to_send)
@@ -87,8 +104,8 @@ def rdt_send(file, size, check, dta, sock):
 				sequence_number+=1
 				print "TO SEND ",to_send
 				index+=1
-	# Start Timer
-	timer = time.time()
+	# Start Timer in a list 
+	timer_list.append(time.time())
 	wait_for_ack(sock)
 
 def wait_for_ack(sock):
@@ -97,8 +114,10 @@ def wait_for_ack(sock):
 	
 	for i in original_sequence:
 		copy_sequence[i] = original_sequence[i]
-	#used to be while 1:
-	while (time.time() - timer) >= 10:
+		
+	#check to see if timers have expired: replace with while loop
+	#while (time.time() - timer) >= 10:
+	while (time.time() - timer_list[i]) < 10:
 		recv_packet, addr = s.recvfrom(MSS)
 		recv_packet = pickle.loads(recv_packet)
 
@@ -108,15 +127,18 @@ def wait_for_ack(sock):
 
 		# Ensure that ack_sequence has a proper value before executing LOC below
 		if ack_sequence < sequence_number:
+			#Check to see if value is an ACK
 			if ack_indicator != "1010101010101010":
 			    print "waiting for ack"
+			#do this if we recieved an ACK
 			else:
-				# Handlre multiple ACKS and timers
+				# Handle multiple ACKS and timers
 				for i in copy_sequence:
 					if ack_sequence == copy_sequence[i]:
 						# Remove this
 						copy_sequence.remove(copy_sequence[i])
 						ack_count+=1
+						#SHOULDNT WE SEND ANOTHER PACKET NOW THAT WE RECEIVED AN ACK... CALL RDT SEND? and st seqnum to min(seqnum)
 
 				if ack_count == window_size:
 					break
@@ -129,6 +151,7 @@ def wait_for_ack(sock):
 
 	sequence_number = min(copy_sequence)
 	copy_sequence = []
+	timer_list = []
 	rdt_send(sock)
 
 
